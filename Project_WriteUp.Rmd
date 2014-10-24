@@ -1,0 +1,60 @@
+---
+title: "Practical Machine Learning - Course Project WriteUp"
+output: html_document
+---
+
+###Question
+
+> The goal of this project is to predict the manner in which an exercise was did. The outcome is the `classe` variable in the training set. 
+
+###Data PreProcessing
+
+Loading and cleaning data for training and test file:
+```{r, echo=TRUE, cache=TRUE}
+train <- read.csv("pml-training.csv", na.strings=c('NA','#DIV/0!',''),stringsAsFactors= FALSE, header=TRUE)
+train <- train[, -c(1:7)]
+index <- colSums(is.na(train)) == 0
+train <- train[, index]
+train$classe <- as.factor(train$classe)
+
+test <- read.csv("pml-testing.csv", na.strings=c('NA','#DIV/0!',''),stringsAsFactors= FALSE, header=TRUE)
+test <- test[, -c(1:7)]
+test <- test[, index]
+dim(train); dim(test)
+```
+
+We take the training file and split it into a training (50%) and validation (50%) set (the test set is delivered as a separate file). The model is build on the training set, the evaluation on the validation set.
+
+```{r, echo=TRUE, cache=TRUE}
+library(caret)
+inTrain <- createDataPartition(y = train$classe, p=0.5, list=FALSE)
+training <- train[inTrain,]
+validation <- train[-inTrain,]
+```
+
+###Model 
+
+A Random Forest model was chosen since it has a high accuracy. Also, it is one of the two top performing algorithms along with boosting in prediction contest.
+
+```{r, echo=TRUE, cache=TRUE}
+library(caret)
+model <- train(classe ~ ., data=training, method="rf", trControl = trainControl(method = "cv", number = 2, repeats=1, allowParallel = TRUE))
+model
+prediction <- predict(model, validation)
+cm <- confusionMatrix(prediction,validation$classe)
+cm
+```
+
+###Out of Sample Error
+
+```{r, echo=TRUE, cache=TRUE}
+1-cm$overall[1]
+```
+
+###Prediction with Testing set
+
+```{r, echo=TRUE, cache=TRUE}
+library(caret)
+test_predict <- predict(model, test)
+test_predict
+```
